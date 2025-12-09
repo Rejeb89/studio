@@ -1,12 +1,11 @@
 
-
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import Image from 'next/image';
 import { Document, Packer, Paragraph, TextRun, AlignmentType } from 'docx';
 import { saveAs } from 'file-saver';
-import { BookText, Download, Loader2, UploadCloud } from 'lucide-react';
+import { BookText, Loader2, UploadCloud } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -45,6 +44,23 @@ export function ImageToTextProApp() {
     }
   };
 
+  const handleExportToWord = async (text: string) => {
+    const doc = new Document({
+      sections: [{
+        children: [
+          new Paragraph({
+            children: [new TextRun(text)],
+            alignment: AlignmentType.RIGHT,
+            bidirectional: true,
+          }),
+        ],
+      }],
+    });
+
+    const blob = await Packer.toBlob(doc);
+    saveAs(blob, 'imagetotextpro-export.docx');
+  };
+  
   const handleExtractText = () => {
     if (!imageData) {
       toast({
@@ -57,14 +73,15 @@ export function ImageToTextProApp() {
 
     startTransition(async () => {
       const result = await performOcr({ photoDataUri: imageData });
-      if (result.success) {
-        setExtractedText(result.text ?? '');
-        if (!result.text) {
-          toast({
-            title: 'No Arabic Text Found',
-            description: 'The OCR could not find any Arabic text in the image.',
-          });
-        }
+      if (result.success && result.text) {
+        setExtractedText(result.text);
+        await handleExportToWord(result.text);
+      } else if (result.success) {
+        setExtractedText('');
+        toast({
+          title: 'No Arabic Text Found',
+          description: 'The OCR could not find any Arabic text in the image.',
+        });
       } else {
         toast({
           variant: 'destructive',
@@ -73,32 +90,6 @@ export function ImageToTextProApp() {
         });
       }
     });
-  };
-
-  const handleExportToWord = async () => {
-    if (!extractedText) {
-      toast({
-        variant: 'destructive',
-        title: 'No Text',
-        description: 'There is no text to export.',
-      });
-      return;
-    }
-
-    const doc = new Document({
-      sections: [{
-        children: [
-          new Paragraph({
-            children: [new TextRun(extractedText)],
-            alignment: AlignmentType.RIGHT,
-            bidirectional: true,
-          }),
-        ],
-      }],
-    });
-
-    const blob = await Packer.toBlob(doc);
-    saveAs(blob, 'imagetotextpro-export.docx');
   };
 
   return (
@@ -161,10 +152,6 @@ export function ImageToTextProApp() {
             <BookText />
           )}
           Extract Text
-        </Button>
-        <Button onClick={handleExportToWord} disabled={!extractedText || isPending}>
-          <Download />
-          Export to Word
         </Button>
       </CardFooter>
     </Card>
