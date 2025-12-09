@@ -3,7 +3,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
-  title: 'NourText',
+  title: 'ImageToTextPro',
   description: 'Extract Arabic text from images with ease.',
 };
 
