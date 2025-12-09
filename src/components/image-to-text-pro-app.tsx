@@ -162,7 +162,7 @@ export function ImageToTextProApp() {
           )}
           Extract Text
         </Button>
-        <Button onClick={handleExportToWord} disabled={!extractedText || isPending} style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}>
+        <Button onClick={handleExportToWord} disabled={!extractedText || isPending}>
           <Download />
           Export to Word
         </Button>
