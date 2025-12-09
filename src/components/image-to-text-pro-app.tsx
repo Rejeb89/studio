@@ -16,35 +16,12 @@ import { performOcr } from '@/app/actions';
 
 export function ImageToTextProApp() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [imageData, setImageData] = useState<string | null>(null);
   const [extractedText, setExtractedText] = useState('');
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
 
-  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      if (!file.type.startsWith('image/')) {
-        toast({
-          variant: 'destructive',
-          title: 'Invalid File Type',
-          description: 'Please upload an image file.',
-        });
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = reader.result as string;
-        setImagePreview(result);
-        setImageData(result);
-        setExtractedText('');
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
   const handleExportToWord = async (text: string) => {
+    if (!text) return;
     const doc = new Document({
       sections: [{
         children: [
@@ -60,9 +37,9 @@ export function ImageToTextProApp() {
     const blob = await Packer.toBlob(doc);
     saveAs(blob, 'imagetotextpro-export.docx');
   };
-  
-  const handleExtractText = () => {
-    if (!imageData) {
+
+  const handleExtractText = (data: string) => {
+    if (!data) {
       toast({
         variant: 'destructive',
         title: 'No Image',
@@ -72,7 +49,7 @@ export function ImageToTextProApp() {
     }
 
     startTransition(async () => {
-      const result = await performOcr({ photoDataUri: imageData });
+      const result = await performOcr({ photoDataUri: data });
       if (result.success && result.text) {
         setExtractedText(result.text);
         await handleExportToWord(result.text);
@@ -92,6 +69,29 @@ export function ImageToTextProApp() {
     });
   };
 
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        toast({
+          variant: 'destructive',
+          title: 'Invalid File Type',
+          description: 'Please upload an image file.',
+        });
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        setImagePreview(result);
+        setExtractedText('');
+        handleExtractText(result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   return (
     <Card className="w-full max-w-5xl shadow-2xl">
       <CardHeader>
@@ -106,6 +106,12 @@ export function ImageToTextProApp() {
               htmlFor="image-upload"
               className="relative flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-card hover:border-primary/50 hover:bg-muted/50 transition-colors aspect-video"
             >
+              {isPending && (
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/50 rounded-md">
+                    <Loader2 className="h-12 w-12 animate-spin text-white" />
+                    <span className="mt-4 text-white">Extracting Text...</span>
+                </div>
+              )}
               {imagePreview ? (
                 <Image
                   src={imagePreview}
@@ -145,14 +151,6 @@ export function ImageToTextProApp() {
         </div>
       </CardContent>
       <CardFooter className="flex justify-end space-x-4">
-        <Button onClick={handleExtractText} disabled={!imageData || isPending} variant="secondary">
-          {isPending ? (
-            <Loader2 className="animate-spin" />
-          ) : (
-            <BookText />
-          )}
-          Extract Text
-        </Button>
       </CardFooter>
     </Card>
   );
